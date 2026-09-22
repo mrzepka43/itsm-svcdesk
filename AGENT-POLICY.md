@@ -1,0 +1,4 @@
+- Bash(rm *): destructive cleanup is not allowed for an agent reviewing this repository; only the human author may delete files.
+- Bash(git push *): the reviewer must not push branch updates or publish code without explicit human approval.
+- Bash(docker *): container commands are restricted to the human operator because they can alter the local environment and project state.
+- WebFetch: the reviewer must not fetch external information during a repository-local review, because the task is grounded in the checked-in project files.
