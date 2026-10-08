@@ -12,6 +12,8 @@ from zoneinfo import ZoneInfo
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
+from svcdesk.dora import calculate_metrics, parse_instant
+
 DB_PATH = os.environ.get("SVCDESK_DB", "/data/svcdesk.db")
 WARSAW = ZoneInfo("Europe/Warsaw")
 C1 = "wallclock"
@@ -251,6 +253,56 @@ async def startup_event() -> None:
 @app.get("/health")
 async def health() -> dict[str, str]:
     return {"status": "ok", "service": "svcdesk"}
+
+
+@app.post("/dora/metrics")
+async def dora_metrics(request: Request) -> JSONResponse:
+    try:
+        payload = await request.json()
+    except Exception:
+        return json_error("validation", "request body must be valid JSON", status=422)
+    if not isinstance(payload, dict):
+        return json_error("validation", "request body must be an object", status=422)
+    window = payload.get("window")
+    if not isinstance(window, dict):
+        return json_error("validation", "window is required and must be an object", status=422)
+    events = payload.get("events")
+    if not isinstance(events, list):
+        return json_error("validation", "events is required and must be an array", status=422)
+    try:
+        parse_instant(window.get("from"))
+        parse_instant(window.get("to"))
+        result = calculate_metrics(window, events)
+    except (TypeError, ValueError, KeyError) as exc:
+        return json_error("validation", str(exc), status=422)
+    return JSONResponse(content=result)
+
+
+@app.get("/dora/ticket-events")
+async def dora_ticket_events() -> list[dict[str, Any]]:
+    conn = get_conn()
+    rows = conn.execute("SELECT * FROM tickets").fetchall()
+    conn.close()
+    lifecycle_events: list[dict[str, Any]] = []
+    phases = (
+        ("created_at", "created", "new"),
+        ("acknowledged_at", "acknowledged", "acknowledged"),
+        ("resolved_at", "resolved", "resolved"),
+        ("closed_at", "closed", "closed"),
+    )
+    for row in rows:
+        for timestamp_field, phase, state in phases:
+            timestamp = row[timestamp_field]
+            if timestamp is not None:
+                lifecycle_events.append({
+                    "ticket_id": row["id"],
+                    "at": iso_utc(parse_rfc3339(timestamp)),
+                    "phase": phase,
+                    "priority": row["priority"],
+                    "state": state,
+                })
+    lifecycle_events.sort(key=lambda event: (parse_rfc3339(event["at"]), event["ticket_id"]))
+    return lifecycle_events
 
 
 @app.post("/tickets")
