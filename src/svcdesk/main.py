@@ -12,6 +12,7 @@ from zoneinfo import ZoneInfo
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
+from svcdesk import observability
 from svcdesk.dora import calculate_metrics, parse_instant
 
 DB_PATH = os.environ.get("SVCDESK_DB", "/data/svcdesk.db")
@@ -21,6 +22,13 @@ C2 = "immutable"
 C3 = "vip"
 
 app = FastAPI(title="svcdesk")
+app.include_router(observability.router)
+app.add_middleware(observability.MetricsMiddleware)
+
+
+@app.on_event("shutdown")
+async def shutdown_event() -> None:
+    await observability.close_client()
 
 
 def json_error(code: str, message: str, status: int = 400) -> JSONResponse:

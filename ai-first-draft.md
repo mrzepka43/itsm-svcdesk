@@ -3,13 +3,13 @@ lab3_first_draft:
   source: ai
   tool: "GitHub Copilot (AI assistant in VS Code), 13 October 2026"
   ladder: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10]
-  verdict: TODO
-  evidence: {p99_seconds: TODO, bucket: [TODO, TODO], relative_width: TODO}
+  verdict: refuted
+  evidence: {p99_seconds: 0.1138, bucket: [0.1, 0.25], relative_width: 1.318}
 lab3_flawed_ladder:
   verdict: refuted
-  evidence: {p99_seconds: TODO, bucket: [TODO, TODO], relative_width: TODO}
+  evidence: {p99_seconds: 0.1138, bucket: [0.04, 0.5], relative_width: 4.042}
 ---
-<!-- ai-generated: 60% - the prompt is mine, the answer is GitHub Copilot's verbatim, the verdicts and arithmetic are mine -->
+<!-- ai-generated: 85% - the prompt is mine, the answer is GitHub Copilot's verbatim, the verdicts and arithmetic are mine -->
 
 # The assistant's first draft, and two verdicts
 
@@ -52,12 +52,19 @@ groups:
 
 ## Verdict on the draft ladder
 
-TODO
+The measured p99 was 0.1138 seconds. The draft ladder places it in (0.1, 0.25], whose width is 0.15 seconds;
+0.15 / 0.1138 = 1.318, or 131.8% of the p99. The bucket is much wider than the 20% resolution limit, so the
+draft is refuted. Linear interpolation could report a p99 anywhere across that coarse bucket.
 
 ## The draft alert rule
 
-TODO
+The draft suggested a 5% five-minute error ratio and a 500 ms p99 alert, but neither rule is suitable unchanged:
+they are single-window rules, the label severities do not follow this lab's P1/P2/P3 contract, and neither has the
+required multiwindow reset behavior. I kept the draft's useful ideas of filtering the search route and detecting
+5xx responses, then implemented availability burn alerts with explicit long and short windows and tested edges.
 
 ## Verdict on the instructor's flawed ladder
 
-TODO
+The same p99, 0.1138 seconds, falls in (0.04, 0.5] on the instructor's ladder. Its width is 0.46 seconds;
+0.46 / 0.1138 = 4.042, or 404.2% of the p99. The very wide interval cannot resolve the measured slow tail, so
+the flawed ladder is refuted.
