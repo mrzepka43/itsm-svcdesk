@@ -1,0 +1,40 @@
+{
+  "investigator": {
+    "agent": "Copilot SDK delegated investigator",
+    "model": "runtime-selected model (not exposed)",
+    "mcp_server": "Prometheus readings supplied from recording lab4-rec-1",
+    "transcript": "ai-rca/second/transcript.md"
+  },
+  "hypotheses": [
+    {
+      "id": "S1",
+      "hypothesis": "The slowdown may be outside the measured internal span or dependencies. Test whether PlaceOrder p95 rose while the internal-span p95 stayed near baseline:",
+      "component": "checkout",
+      "predicts": "histogram_quantile(0.95, sum by (le) (rate(traces_span_metrics_duration_milliseconds_bucket{service_name=\"checkout\",span_name=\"oteldemo.CheckoutService/PlaceOrder\",span_kind=\"SPAN_KIND_SERVER\"}[5m]))) > 250 unless on() histogram_quantile(0.95, sum by (le) (rate(traces_span_metrics_duration_milliseconds_bucket{service_name=\"checkout\",span_name=\"prepareOrderItemsAndShippingQuoteFromCart\",span_kind=\"SPAN_KIND_INTERNAL\"}[5m]))) > 100",
+      "at": "2026-10-12T05:04:30Z",
+      "result": true,
+      "verdict": "correct",
+      "evidence": "At 05:04:30Z PlaceOrder p95 was 5,500 ms while the internal-span p95 was about 47.9 ms, so the query returned the PlaceOrder series. At onset minus five minutes, both were near baseline and the comparison returned nothing."
+    },
+    {
+      "id": "S2",
+      "hypothesis": "Ad-server errors may coincide with the checkout slowdown, but the observed error rate alone does not establish impact.",
+      "component": "ad",
+      "predicts": "sum(rate(traces_span_metrics_calls_total{service_name=\"ad\",span_name=\"oteldemo.AdService/GetAds\",span_kind=\"SPAN_KIND_SERVER\",status_code=\"STATUS_CODE_ERROR\"}[5m])) > 0.005 and on() histogram_quantile(0.95, sum by (le) (rate(traces_span_metrics_duration_milliseconds_bucket{service_name=\"checkout\",span_name=\"oteldemo.CheckoutService/PlaceOrder\",span_kind=\"SPAN_KIND_SERVER\"}[5m]))) > 250",
+      "at": "2026-10-12T05:04:30Z",
+      "result": true,
+      "verdict": "correct",
+      "evidence": "At 05:04:30Z the Ad error rate was about 0.0108/s while checkout PlaceOrder p95 was 5,500 ms, so the coincidence query returned a series. Neither threshold held at the healthy baseline."
+    },
+    {
+      "id": "S3",
+      "hypothesis": "The 110 ms email endpoint p95 may be a contributor only if checkout waits on that operation; the snapshots do not establish that relationship.",
+      "component": "email",
+      "predicts": "histogram_quantile(0.95, sum by (le) (rate(traces_span_metrics_duration_milliseconds_bucket{service_name=\"email\",span_name=\"POST /send_order_confirmation\",span_kind=\"SPAN_KIND_SERVER\"}[5m]))) > 50",
+      "at": "2026-10-12T05:04:30Z",
+      "result": true,
+      "verdict": "partially_correct",
+      "evidence": "The email server-span p95 was 110 ms at 05:04:30Z, above the selected threshold, versus 7.7 ms at baseline. This confirms coincident email latency but does not prove that checkout waits on the operation or that it caused the checkout slowdown."
+    }
+  ]
+}
