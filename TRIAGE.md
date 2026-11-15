@@ -1,14 +1,14 @@
 ---
 lab5_triage:
-  image: ""
+  image: ghcr.io/mrzepka43/itsm-svcdesk@sha256:8542f516492f471dc54d08e4a83101cd5b7992127d7f3e48f81fffcb232778d9
   sarif_receipt: 0
 ---
 <!-- ai-generated: 100% - Copilot recorded the observed first-run findings and the corresponding changes -->
 # Triage
 
 The initial image scan on main reported the following fixable HIGH findings. The updated image passed the same
-Trivy image gate locally. The image digest, receipt, remaining scanner findings and bake-off discussion will be
-added after the corresponding GitHub runs and receipt.
+Trivy image gate locally and on the subsequent main run. The receipt, remaining scanner findings and bake-off
+discussion will be added after the SARIF receipt and labels are available.
 
 | Tool | Rule | Decision | Reason |
 |---|---|---|---|
